@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ผู้ช่วยอัจฉริยะ น้องพิธี (Gemini AI)</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- สำหรับแปลง Markdown จาก Gemini -->
+
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); /* โทนเข้มล้ำยุค */
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .navbar { background: rgba(0, 0, 0, 0.3) !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .chat-container { flex: 1; overflow-y: auto; padding: 20px; margin-bottom: 120px; }
+    
+    .message {
+      max-width: 85%; margin-bottom: 15px; padding: 15px 20px;
+      border-radius: 20px; line-height: 1.6; font-size: 1rem;
+      animation: fadeIn 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .msg-user { background-color: rgba(0, 210, 255, 0.2); color: #fff; margin-left: auto; border-bottom-right-radius: 5px; border: 1px solid rgba(0,210,255,0.3); }
+    .msg-bot { background-color: #fff; color: #1e1e1e; margin-right: auto; border-bottom-left-radius: 5px; }
+    .msg-bot p:last-child { margin-bottom: 0; }
+    
+    .mic-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100; }
+    .mic-btn {
+      width: 75px; height: 75px; border-radius: 50%; background: #00d2ff;
+      border: none; color: white; font-size: 28px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 0 20px rgba(0, 210, 255, 0.5); transition: all 0.3s ease;
+    }
+    .mic-btn.listening { background: #ff416c; box-shadow: 0 0 0 0 rgba(255, 65, 108, 0.7); animation: pulse 1.5s infinite; }
+    @keyframes pulse { to { box-shadow: 0 0 0 40px rgba(255, 65, 108, 0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .admin-panel { display: none; background: #f8f9fa; color: #333; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; overflow-y: auto; padding: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">
+        <i class="fa-solid fa-microchip text-info me-2"></i> น้องพิธี (Powered by Gemini)
+      </a>
+      <button class="btn btn-outline-info btn-sm" onclick="promptAdmin()">
+        <i class="fa-solid fa-database"></i> จัดการความรู้ AI
+      </button>
+    </div>
+  </nav>
+
+  <!-- Chat Area -->
+  <div class="container chat-container" id="chatBox">
+    <div class="message msg-bot">
+      <b><i class="fa-solid fa-robot"></i> น้องพิธี:</b><br>
+      สวัสดีครับ ผมคือผู้ช่วยอัจฉริยะน้องพิธี ขับเคลื่อนด้วย AI Gemini<br>
+      มีคำถามเกี่ยวกับการขอพระราชทานเพลิงศพ หรือศาสนพิธี กดปุ่มไมค์ด้านล่างเพื่อพูดคุยได้เลยครับ
+    </div>
+  </div>
+
+  <!-- Mic Button -->
+  <div class="mic-container">
+    <button class="mic-btn" id="micBtn" onclick="toggleSpeech()">
+      <i class="fa-solid fa-microphone"></i>
+    </button>
+    <div class="text-center mt-2 text-white small fw-bold" id="statusText">กดเพื่อพูดสั่งการ</div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div class="admin-panel" id="adminPanel">
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0 text-primary fw-bold"><i class="fa-solid fa-brain"></i> ฐานความรู้ AI</h4>
+        <button class="btn btn-secondary btn-sm" onclick="closeAdmin()">ปิดหน้าต่าง</button>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <input type="hidden" id="editId">
+          <div class="mb-2">
+            <label class="form-label fw-bold">หมวดหมู่ / หัวข้อเรื่อง</label>
+            <input type="text" class="form-control" id="txtKeywords" placeholder="เช่น การขอพระราชทานเพลิง, เอกสารที่ต้องใช้">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">ข้อมูลความรู้ให้ AI จดจำ</label>
+            <textarea class="form-control" id="txtAnswer" rows="4" placeholder="พิมพ์รายละเอียดข้อมูลที่ถูกต้อง เพื่อให้ Gemini นำไปประมวลผลตอบคำถาม..."></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveData()"><i class="fa-solid fa-save"></i> อัปเดตความรู้</button>
+          <button class="btn btn-light" onclick="clearForm()">ล้างข้อมูล</button>
+        </div>
+      </div>
+
+      <div class="table-responsive bg-white rounded shadow-sm p-3">
+        <table class="table table-hover">
+          <thead class="table-dark">
+            <tr>
+              <th width="30%">หัวข้อ</th>
+              <th width="50%">ข้อมูล</th>
+              <th width="20%">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="tbData"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // ==========================================
+    // 1. นำ URL ของ GAS Web App มาใส่ตรงนี้ครับ
+    // ==========================================
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwtYM6DYZX5Ie0t7z4X5iOLAM-bu9Iuf0qJ-RN94BTA3DDW6Xmbz0AOegCrmDRzVkFegw/exec"; 
+
+    // --- Core Logic: Fetch API ---
+    async function fetchGAS(payload) {
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          // ใช้ text/plain เพื่อป้องกันปัญหา CORS Preflight เวลาเรียกข้ามโดเมนจาก GitHub มาหา Google
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        return await response.json();
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        throw error;
+      }
+    }
+
+    // --- Speech & Chat System ---
+    const chatBox = document.getElementById('chatBox');
+    const micBtn = document.getElementById('micBtn');
+    const statusText = document.getElementById('statusText');
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let isListening = false;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'th-TH';
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.add('listening');
+        statusText.innerText = "กำลังรับฟัง...";
+      };
+
+      recognition.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        addMessage(transcript, 'user');
+        statusText.innerText = "Gemini กำลังวิเคราะห์ข้อมูล...";
+        
+        try {
+          const res = await fetchGAS({ action: 'chat', text: transcript });
+          if (res.status === 'success') {
+            addMessage(res.data, 'bot');
+            speakText(res.data);
+          } else {
+            addMessage("ขออภัยครับ เกิดข้อผิดพลาดในระบบ", 'bot');
+          }
+        } catch (e) {
+          addMessage("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", 'bot');
+        }
+        statusText.innerText = "กดเพื่อพูดสั่งการ";
+      };
+
+      recognition.onerror = () => { statusText.innerText = "ไม่รับรู้เสียง ลองกดใหม่ครับ"; stopListening(); };
+      recognition.onend = () => { stopListening(); };
+    }
+
+    function toggleSpeech() {
+      if (!GAS_URL.startsWith("http")) {
+        Swal.fire('แจ้งเตือน', 'กรุณาใส่ GAS_URL ในโค้ดก่อนใช้งานครับ', 'error');
+        return;
+      }
+      isListening ? recognition.stop() : recognition.start();
+    }
+
+    function stopListening() {
+      isListening = false;
+      micBtn.classList.remove('listening');
+      if(statusText.innerText === "กำลังรับฟัง...") statusText.innerText = "กดเพื่อพูดสั่งการ";
+    }
+
+    function speakText(text) {
+      // ลบตัวอักษรพิเศษ Markdown ออกก่อนให้บอทพูด เพื่อเสียงที่เป็นธรรมชาติ
+      let cleanText = text.replace(/[*#_]/g, ''); 
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'th-TH';
+        utterance.rate = 1.1;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function addMessage(text, sender) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message msg-${sender}`;
+      
+      if (sender === 'user') {
+        msgDiv.innerHTML = `<b><i class="fa-solid fa-user"></i> คุณ:</b><br>${text}`;
+      } else {
+        // ใช้ marked.js แปลงข้อความที่ Gemini ตอบกลับมา (ซึ่งอาจมีตัวหนา ตัวเอียง) ให้เป็น HTML ที่สวยงาม
+        msgDiv.innerHTML = `<b><i class="fa-solid fa-robot text-primary"></i> น้องพิธี:</b><br>${marked.parse(text)}`;
+      }
+      
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // --- Admin System ---
+    function promptAdmin() {
+      Swal.fire({
+        title: 'รหัสผ่านจัดการ AI',
+        input: 'password',
+        showCancelButton: true,
+        confirmButtonText: 'เข้าสู่ระบบ',
+        confirmButtonColor: '#00d2ff'
+      }).then((result) => {
+        if (result.value === "1234") { 
+          document.getElementById('adminPanel').style.display = 'block';
+          loadData();
+        } else if (result.value) {
+          Swal.fire('ปฏิเสธการเข้าถึง', 'รหัสผ่านไม่ถูกต้อง', 'error');
+        }
+      });
+    }
+
+    function closeAdmin() { document.getElementById('adminPanel').style.display = 'none'; clearForm(); }
+
+    async function loadData() {
+      document.getElementById('tbData').innerHTML = '<tr><td colspan="3" class="text-center">กำลังโหลดฐานข้อมูล...</td></tr>';
+      try {
+        const res = await fetchGAS({ action: 'getTrainingData' });
+        let html = '';
+        res.data.forEach(item => {
+          html += `<tr>
+            <td class="fw-bold text-primary">${item.keywords}</td>
+            <td class="text-muted small">${item.answer}</td>
+            <td>
+              <button class="btn btn-sm btn-warning" onclick="editData('${item.id}', '${item.keywords}', '${item.answer}')"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn btn-sm btn-danger" onclick="deleteData('${item.id}')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>`;
+        });
+        document.getElementById('tbData').innerHTML = html;
+      } catch (e) {
+        document.getElementById('tbData').innerHTML = '<tr><td colspan="3" class="text-danger">โหลดข้อมูลล้มเหลว</td></tr>';
+      }
+    }
+
+    function editData(id, keywords, answer) {
+      document.getElementById('editId').value = id;
+      document.getElementById('txtKeywords').value = keywords;
+      document.getElementById('txtAnswer').value = answer;
+    }
+
+    function clearForm() {
+      document.getElementById('editId').value = '';
+      document.getElementById('txtKeywords').value = '';
+      document.getElementById('txtAnswer').value = '';
+    }
+
+    async function saveData() {
+      const id = document.getElementById('editId').value;
+      const keywords = document.getElementById('txtKeywords').value.trim();
+      const answer = document.getElementById('txtAnswer').value.trim();
+
+      if (!keywords || !answer) return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+
+      Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => { Swal.showLoading(); } });
+      
+      try {
+        await fetchGAS({ action: 'saveTrainingData', id, keywords, answer });
+        Swal.fire('สำเร็จ', 'อัปเดตความรู้ให้ Gemini เรียบร้อย', 'success');
+        clearForm(); loadData();
+      } catch (e) {
+        Swal.fire('ข้อผิดพลาด', 'บันทึกไม่สำเร็จ', 'error');
+      }
+    }
+
+    function deleteData(id) {
+      Swal.fire({
+        title: 'ยืนยันการลบ?',
+        icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'ลบทิ้ง'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          Swal.fire({ title: 'กำลังลบ...', didOpen: () => { Swal.showLoading(); } });
+          try {
+            await fetchGAS({ action: 'deleteTrainingData', id });
+            Swal.fire('ลบแล้ว!', '', 'success');
+            loadData();
+          } catch (e) { Swal.fire('ข้อผิดพลาด', 'ลบไม่สำเร็จ', 'error'); }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
