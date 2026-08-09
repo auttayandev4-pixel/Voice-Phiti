@@ -3,110 +3,193 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ผู้ช่วยอัจฉริยะ น้องพิธี (Gemini AI)</title>
+  <title>J.A.R.V.I.S Protocol - น้องพิธี AI</title>
   
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- สำหรับแปลง Markdown จาก Gemini -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
+    :root {
+      --primary-cyan: #00d2ff;
+      --bg-dark: #070f14;
+      --panel-bg: rgba(7, 15, 20, 0.85);
+    }
+    
     body {
       font-family: 'Prompt', sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); /* โทนเข้มล้ำยุค */
+      background: radial-gradient(circle at center, #112d40 0%, var(--bg-dark) 100%);
       color: #fff;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
-    .navbar { background: rgba(0, 0, 0, 0.3) !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .chat-container { flex: 1; overflow-y: auto; padding: 20px; margin-bottom: 120px; }
+
+    /* สแกนเส้นเอฟเฟกต์เหมือนจอคอมยุคอวกาศ */
+    body::before {
+      content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(0, 210, 255, 0.03) 50%, rgba(0, 0, 0, 0.1) 50%);
+      background-size: 100% 4px; pointer-events: none; z-index: 9999; opacity: 0.4;
+    }
+
+    .navbar {
+      background: rgba(0, 0, 0, 0.6) !important;
+      border-bottom: 1px solid rgba(0, 210, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 210, 255, 0.1);
+    }
+    
+    .chat-container {
+      flex: 1; overflow-y: auto; padding: 20px; margin-bottom: 160px;
+      scrollbar-width: thin; scrollbar-color: var(--primary-cyan) transparent;
+    }
     
     .message {
       max-width: 85%; margin-bottom: 15px; padding: 15px 20px;
-      border-radius: 20px; line-height: 1.6; font-size: 1rem;
-      animation: fadeIn 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      border-radius: 12px; line-height: 1.6; font-size: 1rem;
+      animation: fadeIn 0.4s ease forwards;
+      border: 1px solid transparent;
     }
-    .msg-user { background-color: rgba(0, 210, 255, 0.2); color: #fff; margin-left: auto; border-bottom-right-radius: 5px; border: 1px solid rgba(0,210,255,0.3); }
-    .msg-bot { background-color: #fff; color: #1e1e1e; margin-right: auto; border-bottom-left-radius: 5px; }
-    .msg-bot p:last-child { margin-bottom: 0; }
     
-    .mic-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100; }
+    .msg-user {
+      background-color: rgba(0, 210, 255, 0.1);
+      color: var(--primary-cyan); margin-left: auto;
+      border-right: 3px solid var(--primary-cyan);
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.1);
+    }
+    
+    .msg-bot {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #e0e0e0; margin-right: auto;
+      border-left: 3px solid #00ff88;
+      backdrop-filter: blur(5px);
+    }
+    
+    /* J.A.R.V.I.S Arc Reactor Mic */
+    .jarvis-core-wrapper {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; z-index: 100;
+    }
+
+    .jarvis-core {
+      position: relative; width: 90px; height: 90px;
+      display: flex; justify-content: center; align-items: center;
+    }
+
+    /* วงแหวนหมุนรอบปุ่ม */
+    .jarvis-ring {
+      position: absolute; width: 100%; height: 100%;
+      border-radius: 50%; border: 2px solid transparent;
+      border-top-color: var(--primary-cyan);
+      border-bottom-color: rgba(0, 210, 255, 0.3);
+      animation: spin 4s linear infinite;
+    }
+    .jarvis-ring.listening {
+      border-top-color: #ff0055; border-bottom-color: #ff0055;
+      animation: spin 1s linear infinite;
+      box-shadow: 0 0 20px #ff0055;
+    }
+
     .mic-btn {
-      width: 75px; height: 75px; border-radius: 50%; background: #00d2ff;
-      border: none; color: white; font-size: 28px; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; box-shadow: 0 0 20px rgba(0, 210, 255, 0.5); transition: all 0.3s ease;
+      width: 70px; height: 70px; border-radius: 50%;
+      background: radial-gradient(circle, #005a75, #001a24);
+      border: 2px solid var(--primary-cyan);
+      color: var(--primary-cyan); font-size: 26px; z-index: 2;
+      box-shadow: inset 0 0 15px rgba(0, 210, 255, 0.8), 0 0 20px rgba(0, 210, 255, 0.5);
+      transition: all 0.3s;
     }
-    .mic-btn.listening { background: #ff416c; box-shadow: 0 0 0 0 rgba(255, 65, 108, 0.7); animation: pulse 1.5s infinite; }
-    @keyframes pulse { to { box-shadow: 0 0 0 40px rgba(255, 65, 108, 0); } }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .mic-btn.listening {
+      background: radial-gradient(circle, #750027, #24000b);
+      border-color: #ff0055; color: #ff0055;
+      box-shadow: inset 0 0 15px rgba(255, 0, 85, 0.8), 0 0 20px rgba(255, 0, 85, 0.5);
+    }
     
-    .admin-panel { display: none; background: #f8f9fa; color: #333; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; overflow-y: auto; padding: 20px; }
+    .token-counter {
+      font-size: 0.8rem; letter-spacing: 1px; color: var(--primary-cyan);
+      background: rgba(0,0,0,0.5); padding: 3px 10px; border-radius: 20px;
+      border: 1px solid var(--primary-cyan); margin-top: 10px;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Admin Panel */
+    .admin-panel {
+      display: none; background: var(--bg-dark); position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; overflow-y: auto; padding: 20px;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.3);
+      border-radius: 10px; color: #fff;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+  <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="#">
-        <i class="fa-solid fa-microchip text-info me-2"></i> น้องพิธี (Powered by Gemini)
+      <a class="navbar-brand fw-bold text-info" style="letter-spacing: 2px;" href="#">
+        <i class="fa-solid fa-satellite-dish me-2"></i> SYS: NONG-PITI
       </a>
       <button class="btn btn-outline-info btn-sm" onclick="promptAdmin()">
-        <i class="fa-solid fa-database"></i> จัดการความรู้ AI
+        <i class="fa-solid fa-terminal"></i> DIRECTIVE OVERRIDE
       </button>
     </div>
   </nav>
 
-  <!-- Chat Area -->
   <div class="container chat-container" id="chatBox">
     <div class="message msg-bot">
-      <b><i class="fa-solid fa-robot"></i> น้องพิธี:</b><br>
-      สวัสดีครับ ผมคือผู้ช่วยอัจฉริยะน้องพิธี ขับเคลื่อนด้วย AI Gemini<br>
-      มีคำถามเกี่ยวกับการขอพระราชทานเพลิงศพ หรือศาสนพิธี กดปุ่มไมค์ด้านล่างเพื่อพูดคุยได้เลยครับ
+      <b><i class="fa-solid fa-microchip text-success"></i> ระบบเริ่มทำงาน:</b><br>
+      สวัสดีครับ ผมน้องพิธี ผู้ช่วยอัจฉริยะกลุ่มพิธีการศพที่ได้รับพระราชทาน<br>
+      สถานะระบบ: <span class="text-info">ออนไลน์พร้อมรับคำสั่ง</span><br>
+      (จำกัดการโต้ตอบด้วยเสียง 10 ครั้งต่อรอบการใช้งาน)
     </div>
   </div>
 
-  <!-- Mic Button -->
-  <div class="mic-container">
-    <button class="mic-btn" id="micBtn" onclick="toggleSpeech()">
-      <i class="fa-solid fa-microphone"></i>
-    </button>
-    <div class="text-center mt-2 text-white small fw-bold" id="statusText">กดเพื่อพูดสั่งการ</div>
+  <div class="jarvis-core-wrapper">
+    <div class="jarvis-core">
+      <div class="jarvis-ring" id="micRing"></div>
+      <button class="mic-btn" id="micBtn" onclick="toggleSpeech()">
+        <i class="fa-solid fa-microphone"></i>
+      </button>
+    </div>
+    <div class="text-center mt-2 fw-bold text-info small" id="statusText" style="letter-spacing: 1px;">AWAITING COMMAND</div>
+    <div class="token-counter" id="tokenDisplay">COUNCIL TOKENS: 0/10</div>
   </div>
 
   <!-- Admin Panel -->
   <div class="admin-panel" id="adminPanel">
     <div class="container py-4">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0 text-primary fw-bold"><i class="fa-solid fa-brain"></i> ฐานความรู้ AI</h4>
-        <button class="btn btn-secondary btn-sm" onclick="closeAdmin()">ปิดหน้าต่าง</button>
+      <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-info pb-2">
+        <h4 class="mb-0 text-info fw-bold"><i class="fa-solid fa-network-wired"></i> KNOWLEDGE BASE UPLINK</h4>
+        <button class="btn btn-outline-danger btn-sm" onclick="closeAdmin()">DISCONNECT</button>
       </div>
 
-      <div class="card shadow-sm mb-4">
+      <div class="card glass-card shadow-sm mb-4">
         <div class="card-body">
           <input type="hidden" id="editId">
           <div class="mb-2">
-            <label class="form-label fw-bold">หมวดหมู่ / หัวข้อเรื่อง</label>
-            <input type="text" class="form-control" id="txtKeywords" placeholder="เช่น การขอพระราชทานเพลิง, เอกสารที่ต้องใช้">
+            <label class="form-label fw-bold text-info">หมวดหมู่ / คีย์เวิร์ด (DATA NODE)</label>
+            <input type="text" class="form-control bg-dark text-white border-info" id="txtKeywords" placeholder="เช่น การขอพระราชทานเพลิง">
           </div>
           <div class="mb-3">
-            <label class="form-label fw-bold">ข้อมูลความรู้ให้ AI จดจำ</label>
-            <textarea class="form-control" id="txtAnswer" rows="4" placeholder="พิมพ์รายละเอียดข้อมูลที่ถูกต้อง เพื่อให้ Gemini นำไปประมวลผลตอบคำถาม..."></textarea>
+            <label class="form-label fw-bold text-info">ชุดข้อมูลความรู้ (DATA PAYLOAD)</label>
+            <textarea class="form-control bg-dark text-white border-info" id="txtAnswer" rows="4" placeholder="พิมพ์รายละเอียดข้อมูลที่ถูกต้อง..."></textarea>
           </div>
-          <button class="btn btn-primary" onclick="saveData()"><i class="fa-solid fa-save"></i> อัปเดตความรู้</button>
-          <button class="btn btn-light" onclick="clearForm()">ล้างข้อมูล</button>
+          <button class="btn btn-info fw-bold text-dark" onclick="saveData()"><i class="fa-solid fa-cloud-arrow-up"></i> UPLOAD DATA</button>
+          <button class="btn btn-outline-light" onclick="clearForm()">CLEAR</button>
         </div>
       </div>
 
-      <div class="table-responsive bg-white rounded shadow-sm p-3">
-        <table class="table table-hover">
-          <thead class="table-dark">
+      <div class="table-responsive glass-card p-3">
+        <table class="table table-dark table-hover table-borderless">
+          <thead style="border-bottom: 2px solid #00d2ff;">
             <tr>
-              <th width="30%">หัวข้อ</th>
-              <th width="50%">ข้อมูล</th>
-              <th width="20%">จัดการ</th>
+              <th width="30%" class="text-info">NODE</th>
+              <th width="50%" class="text-info">PAYLOAD</th>
+              <th width="20%" class="text-info">ACTION</th>
             </tr>
           </thead>
           <tbody id="tbData"></tbody>
@@ -117,17 +200,18 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // ==========================================
-    // 1. นำ URL ของ GAS Web App มาใส่ตรงนี้ครับ
-    // ==========================================
+    // อัปเดต URL เรียบร้อยตามคำขอ
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwtYM6DYZX5Ie0t7z4X5iOLAM-bu9Iuf0qJ-RN94BTA3DDW6Xmbz0AOegCrmDRzVkFegw/exec"; 
 
-    // --- Core Logic: Fetch API ---
+    // --- Token System ---
+    let questionCount = 0;
+    const MAX_QUESTIONS = 10;
+    const tokenDisplay = document.getElementById('tokenDisplay');
+
     async function fetchGAS(payload) {
       try {
         const response = await fetch(GAS_URL, {
           method: 'POST',
-          // ใช้ text/plain เพื่อป้องกันปัญหา CORS Preflight เวลาเรียกข้ามโดเมนจาก GitHub มาหา Google
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
@@ -138,9 +222,10 @@
       }
     }
 
-    // --- Speech & Chat System ---
+    // --- Speech System ---
     const chatBox = document.getElementById('chatBox');
     const micBtn = document.getElementById('micBtn');
+    const micRing = document.getElementById('micRing');
     const statusText = document.getElementById('statusText');
     
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -155,13 +240,21 @@
       recognition.onstart = () => {
         isListening = true;
         micBtn.classList.add('listening');
-        statusText.innerText = "กำลังรับฟัง...";
+        micRing.classList.add('listening');
+        statusText.innerText = "LISTENING PROTOCOL ACTIVE";
+        statusText.classList.replace('text-info', 'text-danger');
       };
 
       recognition.onresult = async (event) => {
         const transcript = event.results[0][0].transcript;
         addMessage(transcript, 'user');
-        statusText.innerText = "Gemini กำลังวิเคราะห์ข้อมูล...";
+        
+        // อัปเดต Token เมื่อคุยสำเร็จ
+        questionCount++;
+        tokenDisplay.innerText = `COUNCIL TOKENS: ${questionCount}/${MAX_QUESTIONS}`;
+        
+        statusText.innerText = "PROCESSING DATA...";
+        statusText.classList.replace('text-danger', 'text-warning');
         
         try {
           const res = await fetchGAS({ action: 'chat', text: transcript });
@@ -169,21 +262,31 @@
             addMessage(res.data, 'bot');
             speakText(res.data);
           } else {
-            addMessage("ขออภัยครับ เกิดข้อผิดพลาดในระบบ", 'bot');
+            addMessage("SYSTEM ERROR: ไม่สามารถประมวลผลคำตอบได้ครับ", 'bot');
           }
         } catch (e) {
-          addMessage("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", 'bot');
+          addMessage("CONNECTION LOST: ขาดการเชื่อมต่อกับเซิร์ฟเวอร์หลังบ้านครับ", 'bot');
         }
-        statusText.innerText = "กดเพื่อพูดสั่งการ";
+        statusText.innerText = "AWAITING COMMAND";
+        statusText.classList.replace('text-warning', 'text-info');
       };
 
-      recognition.onerror = () => { statusText.innerText = "ไม่รับรู้เสียง ลองกดใหม่ครับ"; stopListening(); };
+      recognition.onerror = () => { 
+        statusText.innerText = "AUDIO SIGNAL LOST"; 
+        statusText.classList.replace('text-danger', 'text-info');
+        stopListening(); 
+      };
       recognition.onend = () => { stopListening(); };
     }
 
     function toggleSpeech() {
-      if (!GAS_URL.startsWith("http")) {
-        Swal.fire('แจ้งเตือน', 'กรุณาใส่ GAS_URL ในโค้ดก่อนใช้งานครับ', 'error');
+      if (questionCount >= MAX_QUESTIONS) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'SYSTEM OVERLOAD',
+          text: 'โควต้าการสนทนาด้วยเสียงของคุณครบ 10 ครั้งแล้วครับ กรุณารีเฟรชหน้าเว็บเพื่อเริ่มเซสชันใหม่',
+          background: '#070f14', color: '#00d2ff', confirmButtonColor: '#00d2ff'
+        });
         return;
       }
       isListening ? recognition.stop() : recognition.start();
@@ -192,11 +295,14 @@
     function stopListening() {
       isListening = false;
       micBtn.classList.remove('listening');
-      if(statusText.innerText === "กำลังรับฟัง...") statusText.innerText = "กดเพื่อพูดสั่งการ";
+      micRing.classList.remove('listening');
+      if(statusText.innerText === "LISTENING PROTOCOL ACTIVE") {
+        statusText.innerText = "AWAITING COMMAND";
+        statusText.classList.replace('text-danger', 'text-info');
+      }
     }
 
     function speakText(text) {
-      // ลบตัวอักษรพิเศษ Markdown ออกก่อนให้บอทพูด เพื่อเสียงที่เป็นธรรมชาติ
       let cleanText = text.replace(/[*#_]/g, ''); 
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -212,30 +318,53 @@
       msgDiv.className = `message msg-${sender}`;
       
       if (sender === 'user') {
-        msgDiv.innerHTML = `<b><i class="fa-solid fa-user"></i> คุณ:</b><br>${text}`;
+        msgDiv.innerHTML = `<b style="color:var(--primary-cyan);"><i class="fa-solid fa-user-astronaut"></i> คุณ:</b><br>${text}`;
       } else {
-        // ใช้ marked.js แปลงข้อความที่ Gemini ตอบกลับมา (ซึ่งอาจมีตัวหนา ตัวเอียง) ให้เป็น HTML ที่สวยงาม
-        msgDiv.innerHTML = `<b><i class="fa-solid fa-robot text-primary"></i> น้องพิธี:</b><br>${marked.parse(text)}`;
+        msgDiv.innerHTML = `<b style="color:#00ff88;"><i class="fa-solid fa-robot"></i> น้องพิธี:</b><br>${marked.parse(text)}`;
       }
       
       chatBox.appendChild(msgDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // --- Admin System ---
+    // --- Admin Authentication System ---
     function promptAdmin() {
       Swal.fire({
-        title: 'รหัสผ่านจัดการ AI',
-        input: 'password',
-        showCancelButton: true,
-        confirmButtonText: 'เข้าสู่ระบบ',
-        confirmButtonColor: '#00d2ff'
-      }).then((result) => {
-        if (result.value === "1234") { 
-          document.getElementById('adminPanel').style.display = 'block';
-          loadData();
-        } else if (result.value) {
-          Swal.fire('ปฏิเสธการเข้าถึง', 'รหัสผ่านไม่ถูกต้อง', 'error');
+        title: 'SECURITY CLEARANCE REQUIRED',
+        html: `
+          <input type="text" id="swal-user" class="swal2-input bg-dark text-white border-info" placeholder="Username">
+          <input type="password" id="swal-pass" class="swal2-input bg-dark text-white border-info" placeholder="Password">
+        `,
+        background: '#070f14', color: '#00d2ff',
+        focusConfirm: false, showCancelButton: true,
+        confirmButtonText: 'AUTHORIZE', confirmButtonColor: '#00d2ff',
+        preConfirm: () => {
+          return {
+            username: document.getElementById('swal-user').value,
+            password: document.getElementById('swal-pass').value
+          }
+        }
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          Swal.fire({ title: 'VERIFYING...', background: '#070f14', color: '#00d2ff', didOpen: () => { Swal.showLoading(); }});
+          
+          try {
+            const res = await fetchGAS({ 
+              action: 'login', 
+              username: result.value.username, 
+              password: result.value.password 
+            });
+            
+            if(res.status === 'success') {
+              Swal.close();
+              document.getElementById('adminPanel').style.display = 'block';
+              loadData();
+            } else {
+              Swal.fire({ icon: 'error', title: 'ACCESS DENIED', text: res.message, background: '#070f14', color: '#ff0055' });
+            }
+          } catch(e) {
+            Swal.fire({ icon: 'error', title: 'NETWORK ERROR', text: 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', background: '#070f14', color: '#ff0055' });
+          }
         }
       });
     }
@@ -243,23 +372,23 @@
     function closeAdmin() { document.getElementById('adminPanel').style.display = 'none'; clearForm(); }
 
     async function loadData() {
-      document.getElementById('tbData').innerHTML = '<tr><td colspan="3" class="text-center">กำลังโหลดฐานข้อมูล...</td></tr>';
+      document.getElementById('tbData').innerHTML = '<tr><td colspan="3" class="text-center text-info">RETRIEVING DATA...</td></tr>';
       try {
         const res = await fetchGAS({ action: 'getTrainingData' });
         let html = '';
         res.data.forEach(item => {
-          html += `<tr>
-            <td class="fw-bold text-primary">${item.keywords}</td>
-            <td class="text-muted small">${item.answer}</td>
+          html += `<tr style="border-bottom: 1px solid rgba(0, 210, 255, 0.1);">
+            <td class="fw-bold text-info">${item.keywords}</td>
+            <td class="text-light small">${item.answer}</td>
             <td>
-              <button class="btn btn-sm btn-warning" onclick="editData('${item.id}', '${item.keywords}', '${item.answer}')"><i class="fa-solid fa-pen"></i></button>
-              <button class="btn btn-sm btn-danger" onclick="deleteData('${item.id}')"><i class="fa-solid fa-trash"></i></button>
+              <button class="btn btn-sm btn-outline-warning" onclick="editData('${item.id}', '${item.keywords}', '${item.answer}')"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteData('${item.id}')"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>`;
         });
         document.getElementById('tbData').innerHTML = html;
       } catch (e) {
-        document.getElementById('tbData').innerHTML = '<tr><td colspan="3" class="text-danger">โหลดข้อมูลล้มเหลว</td></tr>';
+        document.getElementById('tbData').innerHTML = '<tr><td colspan="3" class="text-danger">UPLINK FAILED</td></tr>';
       }
     }
 
@@ -280,31 +409,32 @@
       const keywords = document.getElementById('txtKeywords').value.trim();
       const answer = document.getElementById('txtAnswer').value.trim();
 
-      if (!keywords || !answer) return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+      if (!keywords || !answer) return Swal.fire({ icon: 'warning', title: 'INCOMPLETE DATA', background: '#070f14', color: '#00d2ff' });
 
-      Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({ title: 'UPLOADING...', background: '#070f14', color: '#00d2ff', didOpen: () => { Swal.showLoading(); } });
       
       try {
         await fetchGAS({ action: 'saveTrainingData', id, keywords, answer });
-        Swal.fire('สำเร็จ', 'อัปเดตความรู้ให้ Gemini เรียบร้อย', 'success');
+        Swal.fire({ icon: 'success', title: 'DATA SAVED', text: 'อัปเดตข้อมูลสำเร็จ', background: '#070f14', color: '#00d2ff' });
         clearForm(); loadData();
       } catch (e) {
-        Swal.fire('ข้อผิดพลาด', 'บันทึกไม่สำเร็จ', 'error');
+        Swal.fire({ icon: 'error', title: 'UPLOAD FAILED', background: '#070f14', color: '#ff0055' });
       }
     }
 
     function deleteData(id) {
       Swal.fire({
-        title: 'ยืนยันการลบ?',
-        icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'ลบทิ้ง'
+        title: 'PURGE DATA?',
+        icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff0055', confirmButtonText: 'PURGE',
+        background: '#070f14', color: '#00d2ff'
       }).then(async (result) => {
         if (result.isConfirmed) {
-          Swal.fire({ title: 'กำลังลบ...', didOpen: () => { Swal.showLoading(); } });
+          Swal.fire({ title: 'PURGING...', background: '#070f14', color: '#ff0055', didOpen: () => { Swal.showLoading(); } });
           try {
             await fetchGAS({ action: 'deleteTrainingData', id });
-            Swal.fire('ลบแล้ว!', '', 'success');
+            Swal.fire({ icon: 'success', title: 'DATA PURGED', background: '#070f14', color: '#00d2ff' });
             loadData();
-          } catch (e) { Swal.fire('ข้อผิดพลาด', 'ลบไม่สำเร็จ', 'error'); }
+          } catch (e) { Swal.fire({ icon: 'error', title: 'FAILED', background: '#070f14', color: '#ff0055' }); }
         }
       });
     }
